@@ -90,7 +90,7 @@
 #     )
 #
 #     return model, train_params
-from examples.leftnet.leftnet import LEFTNet, LightningLEFTNet
+from examples.leftnet.leftnet import LEFTNet
 from copy import deepcopy
 
 from examples.leftnet.trainer import LEFTNetTrainer
@@ -161,43 +161,6 @@ def get_model(cfg, dataset, num_classes):
             else None)
     bond_feat_dim = model_attributes_local.get("num_gaussians", 50)
     num_targets = num_classes
-
-    # otf_graph = cfg.MODEL.OTF_GRAPH
-    # use_pbc = cfg.MODEL.USE_PBC
-    # regress_forces = cfg.MODEL.REGRESS_FORCES
-    # output_dim = cfg.MODEL.OUTPUT_DIM
-    # direct_forces = cfg.MODEL.DIRECT_FORCES
-    # cutoff = cfg.MODEL.CUTOFF
-    # num_layers = cfg.MODEL.NUM_LAYERS
-    # readout = cfg.MODEL.READOUT
-    # hidden_channels = cfg.MODEL.HIDDEN_CHANNELS
-    # num_radial = cfg.MODEL.NUM_RADIAL
-    # y_mean = cfg.MODEL.Y_MEAN
-    # y_std = cfg.MODEL.Y_STD
-    # eps = cfg.MODEL.EPS
-
-    # Initialize the LEFTNet model
-    # model = LEFTNet(
-    #     num_atoms=num_atoms,
-    #     bond_feat_dim=bond_feat_dim,
-    #     num_targets=num_targets,
-    #     # otf_graph=otf_graph,
-    #     # use_pbc=use_pbc,
-    #     # regress_forces=regress_forces,
-    #     # output_dim=output_dim,
-    #     # direct_forces=direct_forces,
-    #     # cutoff=cutoff,
-    #     # num_layers=num_layers,
-    #     # readout=readout,
-    #     # hidden_channels=hidden_channels,
-    #     # num_radial=num_radial,
-    #     # y_mean=y_mean,
-    #     # y_std=y_std,
-    #     # eps=eps
-    #     ** model_attributes_local
-    # )
-    #
-    # model = LightningLEFTNet(model)
 
     leftnet_model = LEFTNet(
         num_atoms=num_atoms,

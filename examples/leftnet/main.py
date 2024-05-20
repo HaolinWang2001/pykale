@@ -97,7 +97,7 @@ def main():
         set_seed(seed)  # seed_everything in pytorch_lightning did not set torch.backends.cudnn
         print(f"==> Building model for seed {seed} ......")
         # ---- setup model and logger ----
-        model = get_model(cfg, dataset_train, 2)
+        model = get_model(cfg, dataset_train, 1)
         tb_logger = pl_loggers.TensorBoardLogger(cfg.OUTPUT.OUT_DIR, name="seed{}".format(seed))
         checkpoint_callback = ModelCheckpoint(
             filename="{epoch}-{step}-{valid_loss:.4f}",
@@ -134,8 +134,15 @@ def main():
         ### Training/validation process
         trainer.fit(model, train_dataloader, valid_dataloader)
 
+        # # Load the best model
+        # best_model_path = checkpoint_callback.best_model_path
+        # best_model = get_model(cfg, dataset_train, 1).load_from_checkpoint(best_model_path)
+        #
+        # # Test process
+        # trainer.test(best_model, test_dataloader)
+
         ### Test process
-        trainer.test()
+        trainer.test(model, test_dataloader)
 
 
 if __name__ == "__main__":

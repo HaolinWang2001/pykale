@@ -108,3 +108,23 @@ def close_db(self):
             env.close()
     else:
         self.env.close()
+
+
+
+def data_list_collater(data_list, otf_graph=False):
+    batch = Batch.from_data_list(data_list)
+
+    if not otf_graph:
+        try:
+            n_neighbors = []
+            for i, data in enumerate(data_list):
+                for j in range(data.natoms.shape[0]):
+                    n_index = data[j].edge_index[1, :]
+                    n_neighbors.append(n_index.shape[0])
+            batch.neighbors = torch.tensor(n_neighbors)
+        except (NotImplementedError, TypeError):
+            logging.warning(
+                "LMDB does not contain edge index information, set otf_graph=True"
+            )
+
+    return batch

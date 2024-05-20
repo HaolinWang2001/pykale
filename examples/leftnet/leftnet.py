@@ -14,6 +14,7 @@ from torch_geometric.nn import radius_graph
 from torch_geometric.nn.conv import MessagePassing
 from torch_scatter import scatter
 
+from lmdb_data import data_list_collater
 
 try:
     from common.registry import registry
@@ -333,7 +334,7 @@ class LEFTNet(nn.Module):
             bond_feat_dim,
             num_targets,  # not used
             otf_graph=False,
-            use_pbc=True,
+            use_pbc=False,
             regress_forces=False,
             output_dim=0,
             direct_forces=False,
@@ -432,6 +433,7 @@ class LEFTNet(nn.Module):
             data.neighbors = neighbors
 
         if self.use_pbc:
+            data = data_list_collater([data], otf_graph=self.otf_graph)
             out = get_pbc_distances(
                 data.pos,
                 data.edge_index,
@@ -489,7 +491,9 @@ class LEFTNet(nn.Module):
 
         # LSE: local 3D substructure encoding
         # S_i_j shape: (num_nodes, 3, hidden_channels)
+        # HW: S_i_j contains edge e_ij, nodes i and j, and their neighbors
         S_i_j = self.S_vector(s, edge_diff.unsqueeze(-1), edge_index, radial_hidden)
+        # HW: transformed into invariant coordinates after scalarization
         scalrization1 = torch.sum(S_i_j[i].unsqueeze(2) * edge_frame.unsqueeze(-1), dim=1)
         scalrization2 = torch.sum(S_i_j[j].unsqueeze(2) * edge_frame.unsqueeze(-1), dim=1)
         scalrization1[:, 1, :] = torch.abs(scalrization1[:, 1, :].clone())
