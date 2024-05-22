@@ -37,7 +37,7 @@ _C.TASK.METRIC = "mae"
 # Solver
 # ---------------------------------------------------------------------------- #
 _C.SOLVER = CfgNode()
-_C.SOLVER.SEED = 2020
+_C.SOLVER.SEED = 0
 # _C.SOLVER.BASE_LR = 0.01  # Initial learning rate
 # _C.SOLVER.MOMENTUM = 0.9
 # _C.SOLVER.WEIGHT_DECAY = 0.0005  # 1e-4

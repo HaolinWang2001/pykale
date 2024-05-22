@@ -467,7 +467,7 @@ class LEFTNet(nn.Module):
         radial_emb = self.radial_emb(dist)
         radial_hidden = self.radial_lin(radial_emb)
         rbounds = 0.5 * (torch.cos(dist * pi / self.cutoff) + 1.0)
-        radial_hidden = rbounds.unsqueeze(-1) * radial_hidden
+        radial_hidden = rbounds.unsqueeze(-1) * radial_hidden # HW: RBF function
 
         # init invariant node features
         # shape: (num_nodes, hidden_channels)
@@ -494,7 +494,7 @@ class LEFTNet(nn.Module):
         # HW: S_i_j contains edge e_ij, nodes i and j, and their neighbors
         S_i_j = self.S_vector(s, edge_diff.unsqueeze(-1), edge_index, radial_hidden)
         # HW: transformed into invariant coordinates after scalarization
-        scalrization1 = torch.sum(S_i_j[i].unsqueeze(2) * edge_frame.unsqueeze(-1), dim=1)
+        scalrization1 = torch.sum(S_i_j[i].unsqueeze(2) * edge_frame.unsqueeze(-1), dim=1) # HW: equivariant coordinates
         scalrization2 = torch.sum(S_i_j[j].unsqueeze(2) * edge_frame.unsqueeze(-1), dim=1)
         scalrization1[:, 1, :] = torch.abs(scalrization1[:, 1, :].clone())
         scalrization2[:, 1, :] = torch.abs(scalrization2[:, 1, :].clone())

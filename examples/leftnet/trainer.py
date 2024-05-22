@@ -18,18 +18,11 @@ class LEFTNetTrainer(BaseNNTrainer):
         log_metrics = {f"{split_name}_loss": loss}
         return loss, log_metrics
 
-        # energy_target = batch.y
-        # y_hat = self.forward(batch)
-        #
-        # self.loss_fn = {}
-        #
-        # self.loss_fn["energy"] = nn.L1Loss()
-        #
-        # self.loss_fn["energy"] = DDPLoss(self.loss_fn["energy"])
-        #
-        # loss = self.loss_fn["energy"](y_hat, energy_target)
-        # log_metrics = {f"{split_name}_loss": loss}
-        # return loss, log_metrics
+        # preds = self.forward(batch)
+        # targets = batch.y
+        # preds_force = self.model
+
+
 
 #
 # class DDPLoss(nn.Module):
