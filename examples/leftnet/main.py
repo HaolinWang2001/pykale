@@ -7,13 +7,15 @@ import argparse
 import logging
 
 import pytorch_lightning as pl
-from torch_geometric.data import DataLoader
+from torch.utils.data.dataloader import DataLoader
+
+# from torch_geometric.data import DataLoader
 
 from config import get_cfg_defaults
 from model import get_model
 from data import get_data
 from data import Data
-from data import *
+# from data import *
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint, TQDMProgressBar
 
@@ -22,8 +24,8 @@ from qmof_khot_embeddings import QMOF_KHOT_EMBEDDINGS
 from khot_embeddings import KHOT_EMBEDDINGS
 
 
-from kale.loaddata.video_access import VideoDataset
-from kale.loaddata.video_multi_domain import VideoMultiDomainDatasets
+# from kale.loaddata.video_access import VideoDataset
+# from kale.loaddata.video_multi_domain import VideoMultiDomainDatasets
 from kale.utils.seed import set_seed
 from lmdb_data import LmdbDataset
 import numpy as np
@@ -76,14 +78,14 @@ def main():
     # joined_data = Data('qmof', dataset_train, dataset_valid, dataset_test)
     # result = joined_data.join_dataset()
 
-    dataset_full = JoinedLmdbDataset([dataset_train, dataset_valid, dataset_test])
+    # dataset_full = JoinedLmdbDataset([dataset_train, dataset_valid, dataset_test])
 
     embeddings = KHOT_EMBEDDINGS
     # dataset_full_with_embedding = DatasetWithEmbedding(dataset_full, embeddings)
 
     # data_loader = DataLoader(dataset_full, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True, num_workers=cfg.SOLVER.NUM_WORKERS)
 
-    train_dataloader = DataLoader(dataset_train, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=True,
+    train_dataloader = DataLoader(dataset_train, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=False,
                                   num_workers=cfg.SOLVER.NUM_WORKERS)
     valid_dataloader = DataLoader(dataset_valid, batch_size=cfg.SOLVER.BATCH_SIZE, shuffle=False,
                                   num_workers=cfg.SOLVER.NUM_WORKERS)
