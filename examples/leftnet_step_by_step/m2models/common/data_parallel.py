@@ -15,6 +15,7 @@ from torch.utils.data import BatchSampler, DistributedSampler, Sampler
 
 from m2models.common import distutils, gp_utils
 from m2models.datasets import data_list_collater
+from torch_geometric.data import Batch
 
 
 class OCPDataParallel(torch.nn.DataParallel):
@@ -83,30 +84,52 @@ class ParallelCollater:
         self.otf_graph = otf_graph
 
     def __call__(self, data_list):
-        if self.num_gpus in [0, 1]:  # adds cpu-only case
-            batch = data_list_collater(data_list, otf_graph=self.otf_graph)
-            return [batch]
+        # if self.num_gpus in [0, 1]:  # adds cpu-only case
+        #     batch = data_list_collater(data_list, otf_graph=self.otf_graph)
+        #     return [batch]
+        #
+        # else:
+        #     num_devices = min(self.num_gpus, len(data_list))
+        #
+        #     count = torch.tensor([data.num_nodes for data in data_list])
+        #     cumsum = count.cumsum(0)
+        #     cumsum = torch.cat([cumsum.new_zeros(1), cumsum], dim=0)
+        #     device_id = (
+        #         num_devices * cumsum.to(torch.float) / cumsum[-1].item()
+        #     )
+        #     device_id = (device_id[:-1] + device_id[1:]) / 2.0
+        #     device_id = device_id.to(torch.long)
+        #     split = device_id.bincount().cumsum(0)
+        #     split = torch.cat([split.new_zeros(1), split], dim=0)
+        #     split = torch.unique(split, sorted=True)
+        #     split = split.tolist()
+        #
+        #     return [
+        #         data_list_collater(data_list[split[i] : split[i + 1]])
+        #         for i in range(len(split) - 1)
+        #     ]
 
-        else:
-            num_devices = min(self.num_gpus, len(data_list))
 
-            count = torch.tensor([data.num_nodes for data in data_list])
-            cumsum = count.cumsum(0)
-            cumsum = torch.cat([cumsum.new_zeros(1), cumsum], dim=0)
-            device_id = (
-                num_devices * cumsum.to(torch.float) / cumsum[-1].item()
-            )
-            device_id = (device_id[:-1] + device_id[1:]) / 2.0
-            device_id = device_id.to(torch.long)
-            split = device_id.bincount().cumsum(0)
-            split = torch.cat([split.new_zeros(1), split], dim=0)
-            split = torch.unique(split, sorted=True)
-            split = split.tolist()
+        num_devices = min(self.num_gpus, len(data_list))
 
-            return [
-                data_list_collater(data_list[split[i] : split[i + 1]])
-                for i in range(len(split) - 1)
-            ]
+        count = torch.tensor([data.num_nodes for data in data_list])
+        cumsum = count.cumsum(0)
+        cumsum = torch.cat([cumsum.new_zeros(1), cumsum], dim=0)
+        device_id = (
+            num_devices * cumsum.to(torch.float) / cumsum[-1].item()
+        )
+        device_id = (device_id[:-1] + device_id[1:]) / 2.0
+        device_id = device_id.to(torch.long)
+        split = device_id.bincount().cumsum(0)
+        split = torch.cat([split.new_zeros(1), split], dim=0)
+        split = torch.unique(split, sorted=True)
+        split = split.tolist()
+
+        return [
+            data_list_collater(data_list[split[i] : split[i + 1]])
+            for i in range(len(split) - 1)
+        ]
+
 
 
 @numba.njit

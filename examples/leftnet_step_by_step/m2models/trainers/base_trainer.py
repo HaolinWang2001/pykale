@@ -48,6 +48,8 @@ from m2models.common.utils import (
     radius_graph_pbc,
 )
 
+from examples.leftnet_step_by_step.m2models.datasets import LmdbDataset
+
 
 @registry.register_trainer("base")
 class BaseTrainer(ABC):
@@ -282,13 +284,13 @@ class BaseTrainer(ABC):
         )
         return sampler
 
-    def get_dataloader(self, dataset, sampler):
+    def get_dataloader(self, dataset, sampler=None):
         loader = DataLoader(
             dataset,
             collate_fn=self.parallel_collater,
             num_workers=self.config["optim"]["num_workers"],
             pin_memory=True,
-            batch_sampler=sampler,
+            # batch_sampler=sampler,
         )
         return loader
 
@@ -388,54 +390,72 @@ class BaseTrainer(ABC):
         self.train_loader = self.val_loader = self.test_loader = None
         # expand this list if new models also use dgl
         # TODO: better interface instead of using a list of models
-        if self.config["model"] in ['alignn']:
-            self.prepare_dgl_dataset(self.config)
+        # if self.config["model"] in ['alignn']:
+        #     self.prepare_dgl_dataset(self.config)
 
         if self.config.get("dataset", None):
-            self.train_dataset = registry.get_dataset_class(
-                self.config["task"]["dataset"]
-            )(self.config["dataset"])
-            self.train_sampler = self.get_sampler(
-                self.train_dataset,
-                self.config["optim"]["batch_size"],
-                shuffle=True,
-            )
-            self.train_loader = self.get_dataloader(
-                self.train_dataset,
-                self.train_sampler,
-            )
 
-            if self.config.get("val_dataset", None):
-                self.val_dataset = registry.get_dataset_class(
-                    self.config["task"]["dataset"]
-                )(self.config["val_dataset"])
-                self.val_sampler = self.get_sampler(
-                    self.val_dataset,
-                    self.config["optim"].get(
-                        "eval_batch_size", self.config["optim"]["batch_size"]
-                    ),
-                    shuffle=False,
-                )
-                self.val_loader = self.get_dataloader(
-                    self.val_dataset,
-                    self.val_sampler,
-                )
+            # dataset = LmdbDataset(self.config, self.parallel_collater)
+            # self.train_loader = dataset.get_train_loader()
+            # self.val_loader = dataset.get_val_loader()
+            # self.test_loader = dataset.get_test_loader()
 
-            if self.config.get("test_dataset", None):
-                self.test_dataset = registry.get_dataset_class(
-                    self.config["task"]["dataset"]
-                )(self.config["test_dataset"])
-                self.test_sampler = self.get_sampler(
-                    self.test_dataset,
-                    self.config["optim"].get(
-                        "eval_batch_size", self.config["optim"]["batch_size"]
-                    ),
-                    shuffle=False,
-                )
-                self.test_loader = self.get_dataloader(
-                    self.test_dataset,
-                    self.test_sampler,
-                )
+
+
+            # self.train_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["dataset"])
+            train_dataset = LmdbDataset(self.config["dataset"], self.parallel_collater)   # WIP
+            self.train_loader = train_dataset.get_train_loader()
+
+            self.val_dataset = LmdbDataset(self.config["val_dataset"])
+            # self.val_loader = DataLoader(self.val_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+            self.val_loader = self.get_val_loader()
+
+            self.test_dataset = LmdbDataset(self.config["test_dataset"])
+            # self.test_loader = DataLoader(self.test_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+            self.test_loader = self.get_test_loader()
+
+            # self.val_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["val_dataset"])
+            # self.val_loader = DataLoader(
+            #             self.val_dataset,
+            #             collate_fn=self.parallel_collater,
+            #             num_workers=self.config["optim"]["num_workers"],
+            #             pin_memory=True,
+            #             # batch_sampler=sampler,
+            #         )
+            #
+            # self.test_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["test_dataset"])
+            # self.test_loader = DataLoader(self.test_dataset, collate_fn=self.parallel_collater,batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+            # if self.config.get("val_dataset", None):
+            #     self.val_dataset = registry.get_dataset_class(
+            #         self.config["task"]["dataset"]
+            #     )(self.config["val_dataset"])
+                # self.val_sampler = self.get_sampler(
+                #     self.val_dataset,
+                #     self.config["optim"].get(
+                #         "eval_batch_size", self.config["optim"]["batch_size"]
+                #     ),
+                #     shuffle=False,
+                # )
+                # self.val_loader = self.get_dataloader(
+                #     self.val_dataset,
+                #     # self.val_sampler,
+                # )
+            #
+            # if self.config.get("test_dataset", None):
+            #     self.test_dataset = registry.get_dataset_class(
+            #         self.config["task"]["dataset"]
+            #     )(self.config["test_dataset"])
+            #     # self.test_sampler = self.get_sampler(
+            #     #     self.test_dataset,
+            #     #     self.config["optim"].get(
+            #     #         "eval_batch_size", self.config["optim"]["batch_size"]
+            #     #     ),
+            #     #     shuffle=False,
+            #     # )
+            #     self.test_loader = self.get_dataloader(
+            #         self.test_dataset,
+            #         # self.test_sampler,
+            #     )
 
         # Normalizer for the dataset.
         # Compute mean, std of training set labels.

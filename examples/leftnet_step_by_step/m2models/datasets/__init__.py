@@ -4,7 +4,7 @@ Codes borrowed from Open Catalyst Project (OCP) https://github.com/Open-Catalyst
 
 from .lmdb_dataset import (
     LmdbDataset,
-    SinglePointLmdbDataset,
-    TrajectoryLmdbDataset,
+    # SinglePointLmdbDataset,
+    # TrajectoryLmdbDataset,
     data_list_collater,
 )

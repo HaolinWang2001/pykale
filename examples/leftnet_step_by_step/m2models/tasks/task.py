@@ -6,7 +6,7 @@ import logging
 import os
 
 from m2models.common.registry import registry
-from m2models.trainers.forces_trainer import ForcesTrainer
+# from m2models.trainers.forces_trainer import ForcesTrainer
 
 
 class BaseTask:

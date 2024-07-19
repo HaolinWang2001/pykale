@@ -221,14 +221,17 @@ class EnergyTrainer(BaseTrainer):
         for epoch_int in range(
             start_epoch, self.config["optim"]["max_epochs"]
         ):
-            self.train_sampler.set_epoch(epoch_int)
+            # self.train_sampler.set_epoch(epoch_int)   # /hW
             skip_steps = self.step % len(self.train_loader)
             train_loader_iter = iter(self.train_loader)
 
             len_train_loader = len(self.train_loader)
             for i in range(skip_steps, len_train_loader):
-                self.epoch = epoch_int + (i + 1) / len(self.train_loader)
-                self.step = epoch_int * len(self.train_loader) + i + 1
+            # for batch in self.train_loader:
+                # self.epoch = epoch_int + (i + 1) / len(self.train_loader)
+                self.epoch += 1/len(self.train_loader)
+                # self.step = epoch_int * len(self.train_loader) + i + 1
+                self.step += 1
                 self.model.train()
 
                 # Get a batch.
@@ -350,21 +353,28 @@ class EnergyTrainer(BaseTrainer):
         }
 
     def _compute_loss(self, out, batch_list):
-        if hasattr(batch_list[0], "y_relaxed"):
-            energy_target = torch.cat(
-                [batch.y_relaxed.to(self.device) for batch in batch_list], dim=0
-            )
-        else:
-            energy_target = torch.cat(
+        # if hasattr(batch_list[0], "y_relaxed"):
+        #     energy_target = torch.cat(
+        #         [batch.y_relaxed.to(self.device) for batch in batch_list], dim=0
+        #     )
+        # else:
+        #     energy_target = torch.cat(
+        #         [batch.y.to(self.device) for batch in batch_list], dim=0
+        #     )
+
+        energy_target = torch.cat(
                 [batch.y.to(self.device) for batch in batch_list], dim=0
             )
 
-        if self.normalizer.get("normalize_labels", False):
-            target_normed = self.normalizers["target"].norm(energy_target)
-        else:
-            target_normed = energy_target
+        # if self.normalizer.get("normalize_labels", False):
+        #     target_normed = self.normalizers["target"].norm(energy_target)
+        # else:
+        #     target_normed = energy_target
 
-        loss = self.loss_fn["energy"](out["energy"], target_normed)
+        # loss = self.loss_fn["energy"](out["energy"], target_normed)
+        loss = torch.nn.L1Loss()(out["energy"], energy_target)
+
+
         return loss
 
     def _compute_metrics(self, out, batch_list, evaluator, metrics={}):
