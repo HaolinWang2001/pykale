@@ -5,7 +5,16 @@ Codes borrowed from Open Catalyst Project (OCP) https://github.com/Open-Catalyst
 import logging
 import os
 
+import pytorch_lightning as pl
+from pytorch_lightning import loggers as pl_loggers
 from m2models.common.registry import registry
+from torch_geometric.data import DataLoader
+
+from examples.leftnet_step_by_step.get_model import load_model
+from examples.leftnet_step_by_step.m2models.common.data_parallel import ParallelCollater
+from examples.leftnet_step_by_step.m2models.datasets.lmdb_dataaccess import LmdbDatasetAccess
+
+
 # from m2models.trainers.forces_trainer import ForcesTrainer
 
 
@@ -42,15 +51,43 @@ class TrainTask(BaseTask):
                     )
 
     def run(self):
-        try:
-            self.trainer.train(
-                disable_eval_tqdm=self.config.get(
-                    "hide_eval_progressbar", False
+        # try:
+        #     self.trainer.train(
+        #         disable_eval_tqdm=self.config.get(
+        #             "hide_eval_progressbar", False
+        #         )
+        #     )
+        # except RuntimeError as e:
+        #     self._process_error(e)
+        #     raise e
+        parallel_collater = ParallelCollater(
+                    0 if self.config["cpu"] else 1,
+            #         # self.config["model_attributes"].get("otf_graph", False),
                 )
-            )
-        except RuntimeError as e:
-            self._process_error(e)
-            raise e
+        dataset = LmdbDatasetAccess(self.config["dataset"]["train"], self.config["dataset"]["val"], self.config["dataset"]["test"])
+        train_dataset = dataset.get_train()
+        val_dataset = dataset.get_valid()
+        test_dataset = dataset.get_test()
+        train_loader = DataLoader(train_dataset, collate_fn=parallel_collater, batch_size=self.config["optim"]["batch_size"],
+               shuffle=True, pin_memory=True, )
+        val_loader = DataLoader(val_dataset, collate_fn=parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+        test_loader = DataLoader(test_dataset, collate_fn=parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+
+        model = load_model(self.config, dataset, 1)
+        # model = self.trainer
+        trainer = pl.Trainer(
+            max_epochs=self.config["optim"]["max_epochs"],
+            accelerator="gpu" if not self.config["cpu"] else "cpu",
+            devices="auto",
+            logger=pl_loggers.TensorBoardLogger("./"),
+            # registry.get_logger_class(self.config["logger"])(self.config),
+
+
+        )
+        trainer.fit(model, train_loader, val_loader)
+
+
+
 
 
 @registry.register_task("predict")

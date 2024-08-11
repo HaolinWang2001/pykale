@@ -547,7 +547,8 @@ def radius_graph_pbc(
     data, radius, max_num_neighbors_threshold, pbc=[True, True, True]
 ):
     device = data.pos.device
-    batch_size = len(data.natoms)
+    # batch_size = len(data.natoms)
+    batch_size = data.natoms
 
     if hasattr(data, "pbc"):
         data.pbc = torch.atleast_2d(data.pbc)
@@ -566,7 +567,8 @@ def radius_graph_pbc(
 
     # Before computing the pairwise distances between atoms, first create a list of atom indices to compare for the entire batch
     num_atoms_per_image = data.natoms
-    num_atoms_per_image_sqr = (num_atoms_per_image**2).long()
+    # num_atoms_per_image_sqr = (num_atoms_per_image**2).long()
+    num_atoms_per_image_sqr = num_atoms_per_image * num_atoms_per_image
 
     # index offset between images
     index_offset = (
@@ -944,24 +946,37 @@ def new_trainer_context(*, config: Dict[str, Any], args: Namespace):
             config.get("trainer", "energy")
         )
         assert trainer_cls is not None, "Trainer not found"
-        trainer = trainer_cls(
-            task=config["task"],
-            model=config["model"],
-            dataset=config["dataset"],
-            optimizer=config["optim"],
-            identifier=config["identifier"],
-            timestamp_id=config.get("timestamp_id", None),
-            run_dir=config.get("run_dir", "./"),
-            is_debug=config.get("is_debug", False),
-            print_every=config.get("print_every", 10),
-            seed=config.get("seed", 0),
-            logger=config.get("logger", "tensorboard"),
-            local_rank=config["local_rank"],
-            amp=config.get("amp", False),
-            cpu=config.get("cpu", False),
-            slurm=config.get("slurm", {}),
-            noddp=config.get("noddp", False),
-        )
+        if trainer_cls == "energy":
+            trainer = trainer_cls(
+                task=config["task"],
+                model=config["model"],
+                dataset=config["dataset"],
+                optimizer=config["optim"],
+                identifier=config["identifier"],
+                timestamp_id=config.get("timestamp_id", None),
+                run_dir=config.get("run_dir", "./"),
+                is_debug=config.get("is_debug", False),
+                print_every=config.get("print_every", 10),
+                seed=config.get("seed", 0),
+                logger=config.get("logger", "tensorboard"),
+                local_rank=config["local_rank"],
+                amp=config.get("amp", False),
+                cpu=config.get("cpu", False),
+                slurm=config.get("slurm", {}),
+                noddp=config.get("noddp", False),
+            )
+        else:
+            trainer = trainer_cls(
+                # task=config["task"],
+                model = config["model"],
+                # dataset=config["dataset"],
+                max_epochs = config["optim"]["max_epochs"],
+                init_lr=config["optim"]["lr_initial"],
+                optimizer_params=config["optim"],
+                adapt_lr=False,
+                run_dir=config.get("run_dir", "./"),
+                logger=config.get("logger", "tensorboard"),
+            )
 
         task_cls = registry.get_task_class(config["mode"])
         assert task_cls is not None, "Task not found"

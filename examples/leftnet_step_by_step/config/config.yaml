@@ -1,6 +1,6 @@
-trainer: energy
-
-logger: wandb
+#trainer: energy
+trainer: pykaleenergy
+logger: tensorboard
 
 task:
   dataset: lmdb
@@ -12,11 +12,11 @@ task:
 
 dataset:
   train:
-    src: data/omdb/band_gap/random_train/
+    src: data/data/omdb/band_gap/random_train/
   val:
-    src: data/omdb/band_gap/random_valid/
+    src: data/data/omdb/band_gap/random_valid/
   test:
-    src: data/omdb/band_gap/random_test/
+    src: data/data/omdb/band_gap/random_test/
 
 
 model:
@@ -31,9 +31,9 @@ model:
  output_dim: 1
 
 optim:
- batch_size: 32
- eval_batch_size: 32
- num_workers: 4
+ batch_size: 1
+ eval_batch_size: 1
+ num_workers: 0
  lr_initial: 0.0005
  lr_gamma: 0.1
  lr_milestones:
@@ -41,4 +41,5 @@ optim:
  warmup_steps: -1
  warmup_factor: 1.0
  max_epochs: 10
+# max_epochs: 500
  eval_every: 500

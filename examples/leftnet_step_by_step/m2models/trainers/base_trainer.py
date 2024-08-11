@@ -49,6 +49,8 @@ from m2models.common.utils import (
 )
 
 from examples.leftnet_step_by_step.m2models.datasets import LmdbDataset
+from examples.leftnet_step_by_step.m2models.datasets.lmdb_dataaccess import LmdbDatasetAccess
+
 
 
 @registry.register_trainer("base")
@@ -403,16 +405,19 @@ class BaseTrainer(ABC):
 
 
             # self.train_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["dataset"])
-            train_dataset = LmdbDataset(self.config["dataset"], self.parallel_collater)   # WIP
-            self.train_loader = train_dataset.get_train_loader()
+            # self.train_dataset = LmdbDataset(self.config["dataset"])   # WIP
+            # self.train_loader = DataLoader(self.train_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"],
+            #        shuffle=True, pin_memory=True, )
 
-            self.val_dataset = LmdbDataset(self.config["val_dataset"])
-            # self.val_loader = DataLoader(self.val_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
-            self.val_loader = self.get_val_loader()
+            self.dataset = LmdbDatasetAccess(self.config)
+            self.train_dataset = self.dataset.get_train()
+            self.val_dataset = self.dataset.get_valid()
+            self.test_dataset = self.dataset.get_test()
+            self.train_loader = DataLoader(self.train_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"],
+                   shuffle=True, pin_memory=True, )
+            self.val_loader = DataLoader(self.val_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
+            self.test_loader = DataLoader(self.test_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
 
-            self.test_dataset = LmdbDataset(self.config["test_dataset"])
-            # self.test_loader = DataLoader(self.test_dataset, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"], shuffle=False, pin_memory=True, )
-            self.test_loader = self.get_test_loader()
 
             # self.val_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["val_dataset"])
             # self.val_loader = DataLoader(
@@ -792,6 +797,7 @@ class BaseTrainer(ABC):
                 with torch.cuda.amp.autocast(enabled=self.scaler is not None):
                     out = self._forward(batch)
                     loss = self._compute_loss(out, batch)
+
                 
                     # Compute metrics.
                     metrics = self._compute_metrics(out, batch, evaluator, metrics)

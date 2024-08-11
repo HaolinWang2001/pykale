@@ -22,6 +22,10 @@ from m2models.common import distutils
 from m2models.common.registry import registry
 from m2models.common.utils import pyg2_data_transform
 from torch_geometric.data import Batch
+
+from examples.leftnet_step_by_step.m2models.common.utils import radius_graph_pbc, get_pbc_distances
+
+
 # from m2models.common.data_parallel import (
 #     # BalancedBatchSampler,
 #     # OCPDataParallel,
@@ -45,17 +49,16 @@ class LmdbDataset(Dataset):
                     (default: :obj:`None`)
     """
 
-    def __init__(self, config, parallel_collater, transform=None):
+    def __init__(self, config, transform=None):
         super(LmdbDataset, self).__init__()
         self.config = config
-        self.parallel_collater = parallel_collater
-        # self.parallel_collater = parallel_collater
+
 
         # assert not self.config.get(
         #     "train_on_oc20_total_energies", False
         # ), "For training on total energies set dataset=oc22_lmdb"
 
-        self.path = Path(self.config["src"])    # WIP
+        self.path = Path(self.config["src"])
 
         # self.train_path = Path(self.config["dataset"]["src"])
         # self.val_path = Path(self.config["val_dataset"]["src"])
@@ -157,60 +160,6 @@ class LmdbDataset(Dataset):
         else:
             self.env.close()
 
-    def load_data(self):
-        # move dataset loader from base_trainer to here
-
-        self.train_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["dataset"])
-
-        self.val_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["val_dataset"])
-        self.test_dataset = registry.get_dataset_class(self.config["task"]["dataset"])(self.config["test_dataset"])
-
-    def get_train_loader(self):
-        return DataLoader(self, collate_fn=self.parallel_collater, batch_size=self.config["optim"]["batch_size"],
-                   shuffle=True, pin_memory=True, )
-
-    def get_val_loader(self):
-        return DataLoader(
-            self,
-            collate_fn=self.parallel_collater,
-            num_workers=self.config["optim"]["num_workers"],
-            pin_memory=True,
-            # batch_sampler=sampler,
-        )
-    def get_test_loader(self):
-        return DataLoader(
-            self,
-            collate_fn=self.parallel_collater,
-            num_workers=self.config["optim"]["num_workers"],
-            pin_memory=True,
-            # batch_sampler=sampler,
-        )
-
-    # def get_train_loader(self, batch_size, shuffle=True, num_workers=0):
-    #     return torch_geometric.data.DataLoader(
-    #         self,
-    #         batch_size=batch_size,
-    #         shuffle=shuffle,
-    #         num_workers=num_workers,
-    #         # collate_fn=data_list_collater,
-    #     )
-    # def get_valid_loader(self, batch_size, shuffle=False, num_workers=0):
-    #     return torch.utils.data.DataLoader(
-    #         self,
-    #         batch_size=batch_size,
-    #         shuffle=shuffle,
-    #         num_workers=num_workers,
-    #         # collate_fn=data_list_collater,
-    #     )
-    #
-    # def get_test_loader(self, batch_size, shuffle=False, num_workers=0):
-    #     return torch.utils.data.DataLoader(
-    #         self,
-    #         batch_size=batch_size,
-    #         shuffle=shuffle,
-    #         num_workers=num_workers,
-    #         # collate_fn=data_list_collater,
-    #     )
 
 
 # class SinglePointLmdbDataset(LmdbDataset):
@@ -249,3 +198,79 @@ def data_list_collater(data_list, otf_graph=False):
             )
 
     return batch
+
+def generate_graph(
+    data,
+    cutoff=None,
+    max_neighbors=None,
+    use_pbc=None,
+    otf_graph=None,
+):
+    cutoff = cutoff
+    max_neighbors = max_neighbors
+    use_pbc = use_pbc
+    otf_graph = otf_graph
+
+    if not otf_graph:
+        try:
+            edge_index = data.edge_index
+
+            if use_pbc:
+                cell_offsets = data.cell_offsets
+                neighbors = data.neighbors
+
+        except AttributeError:
+            logging.warning(
+                "Turning otf_graph=True as required attributes not present in data object"
+            )
+            otf_graph = True
+
+    if use_pbc:
+        if otf_graph:
+            edge_index, cell_offsets, neighbors = radius_graph_pbc(
+                data, cutoff, max_neighbors
+            )
+
+        out = get_pbc_distances(
+            data.pos,
+            edge_index,
+            data.cell,
+            cell_offsets,
+            neighbors,
+            return_offsets=True,
+            return_distance_vec=True,
+        )
+
+        edge_index = out["edge_index"]
+        edge_dist = out["distances"]
+        cell_offset_distances = out["offsets"]
+        distance_vec = out["distance_vec"]
+    else:
+        if otf_graph:
+            edge_index = radius_graph(
+                data.pos,
+                r=cutoff,
+                batch=data.batch,
+                max_num_neighbors=max_neighbors,
+            )
+
+        j, i = edge_index
+        distance_vec = data.pos[j] - data.pos[i]
+
+        edge_dist = distance_vec.norm(dim=-1)
+        cell_offsets = torch.zeros(
+            edge_index.shape[1], 3, device=data.pos.device
+        )
+        cell_offset_distances = torch.zeros_like(
+            cell_offsets, device=data.pos.device
+        )
+        neighbors = compute_neighbors(data, edge_index)
+
+    return (
+        edge_index,
+        edge_dist,
+        distance_vec,
+        cell_offsets,
+        cell_offset_distances,
+        neighbors,
+    )
